@@ -3,6 +3,7 @@ name: Step 2
 on:
   pull_request_review:
     types: [submitted]
+  workflow_dispatch:
 
 permissions:
   contents: read
