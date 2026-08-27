@@ -1,7 +1,3 @@
-## Development Environment
-
-For detailed setup and development instructions, please refer to our [Development Guide](../docs/how-to-develop.md).
-
 ### User Interaction
 
 Consider the following when communicating with the staff.
