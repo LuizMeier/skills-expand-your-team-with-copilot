@@ -363,6 +363,65 @@ document.addEventListener("DOMContentLoaded", () => {
     return "academic";
   }
 
+  function getActivityShareData(name, details) {
+    const pageUrl = window.location.href.split("#")[0];
+    const schedule = formatSchedule(details);
+    const shareMessage = `Check out "${name}" at Mergington High School activities! Schedule: ${schedule}`;
+
+    return {
+      pageUrl,
+      shareMessage,
+      encodedMessage: encodeURIComponent(shareMessage),
+      encodedUrl: encodeURIComponent(pageUrl),
+    };
+  }
+
+  async function copyShareLink(pageUrl) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(pageUrl);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = pageUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+
+      showMessage("Share link copied!", "success");
+    } catch (error) {
+      console.error("Error copying share link:", error);
+      showMessage("Could not copy the share link. Please try again.", "error");
+    }
+  }
+
+  async function shareActivityWithDevice(name, details) {
+    const { pageUrl, shareMessage } = getActivityShareData(name, details);
+
+    if (!navigator.share) {
+      await copyShareLink(pageUrl);
+      return;
+    }
+
+    try {
+      await navigator.share({
+        title: `${name} | Mergington High School`,
+        text: shareMessage,
+        url: pageUrl,
+      });
+      showMessage("Activity shared!", "success");
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Error sharing activity:", error);
+        showMessage("Could not share right now. Please try again.", "error");
+      }
+    }
+  }
+
   // Function to fetch activities from API with optional day and time filters
   async function fetchActivities() {
     // Show loading skeletons first
@@ -519,6 +578,33 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
 
+    const { encodedMessage, encodedUrl } = getActivityShareData(name, details);
+    const shareButtons = `
+      <div class="activity-share">
+        <p class="share-label">Share with friends:</p>
+        <div class="share-buttons">
+          <button type="button" class="share-button share-native-button">Share</button>
+          <a
+            class="share-button share-whatsapp"
+            href="https://wa.me/?text=${encodedMessage}%20${encodedUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            WhatsApp
+          </a>
+          <a
+            class="share-button share-x"
+            href="https://twitter.com/intent/tweet?text=${encodedMessage}&url=${encodedUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            X
+          </a>
+          <button type="button" class="share-button share-copy-button">Copy Link</button>
+        </div>
+      </div>
+    `;
+
     activityCard.innerHTML = `
       ${tagHtml}
       <h4>${name}</h4>
@@ -552,6 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
+      ${shareButtons}
       <div class="activity-card-actions">
         ${
           currentUser
@@ -586,6 +673,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    const shareNativeButton = activityCard.querySelector(".share-native-button");
+    const shareCopyButton = activityCard.querySelector(".share-copy-button");
+    const { pageUrl } = getActivityShareData(name, details);
+
+    shareNativeButton.addEventListener("click", () => {
+      shareActivityWithDevice(name, details);
+    });
+
+    shareCopyButton.addEventListener("click", () => {
+      copyShareLink(pageUrl);
+    });
 
     activitiesList.appendChild(activityCard);
   }
